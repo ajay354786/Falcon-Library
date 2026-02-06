@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Falcon Library</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <div class="navbar-brand">FALCON LIBRARY</div>
+            <ul class="navbar-menu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="students.html">Students</a></li>
+                <li><a href="seats.html">Seats</a></li>
+                <li><a href="shifts.html">Shifts</a></li>
+                <li><a href="reports.html" class="active">Reports</a></li>
+                <li><a href="settings.html">Settings</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Reports</h1>
+            </div>
+
+            <div class="report-options">
+                <button class="btn btn-secondary" onclick="generateStudentReport()">📋 Student List Report</button>
+                <button class="btn btn-secondary" onclick="generateSeatUtilizationReport()">🪑 Seat Utilization Report</button>
+                <button class="btn btn-secondary" onclick="generatePaymentReport()">💰 Monthly Payment Report</button>
+            </div>
+
+            <div id="reportContainer"></div>
+
+            <div id="exportSection" style="display:none;">
+                <div class="export-buttons">
+                    <button class="btn btn-primary" onclick="exportToExcel()">📥 Export to Excel</button>
+                    <button class="btn btn-secondary" onclick="printReport()">🖨️ Print</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let currentReportData = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+        });
+
+        function generateStudentReport() {
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+            let html = '<div class="report"><h2>Student List Report</h2>';
+            html += '<p class="report-date">Generated on: ' + new Date().toLocaleDateString('en-IN') + '</p>';
+            html += '<table class="data-table"><thead><tr><th>Name</th><th>Mobile</th><th>Joining Date</th><th>Seat</th><th>Shift</th><th>Status</th></tr></thead><tbody>';
+
+            if (students.length === 0) {
+                html += '<tr><td colspan="6" class="empty-state">No students found.</td></tr>';
+            } else {
+                students.forEach(student => {
+                    html += '<tr>';
+                    html += '<td>' + student.name + '</td>';
+                    html += '<td>' + student.mobile + '</td>';
+                    html += '<td>' + new Date(student.joiningDate).toLocaleDateString('en-IN') + '</td>';
+                    html += '<td>' + (student.seatNumber || '-') + '</td>';
+                    html += '<td>' + (student.shift || '-') + '</td>';
+                    html += '<td>' + student.status + '</td>';
+                    html += '</tr>';
+                });
+            }
+
+            html += '</tbody></table></div>';
+
+            currentReportData = {
+                title: 'Student List Report',
+                data: students,
+                headers: ['Name', 'Mobile', 'Joining Date', 'Seat', 'Shift', 'Status']
+            };
+
+            document.getElementById('reportContainer').innerHTML = html;
+            document.getElementById('exportSection').style.display = 'block';
+        }
+
+        function generateSeatUtilizationReport() {
+            const settings = JSON.parse(localStorage.getItem('settings')) || { totalSeats: 0 };
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+
+            const occupiedSeats = students.filter(s => s.status === 'Active' && s.seatNumber).length;
+            const vacantSeats = Math.max(0, (settings.totalSeats || 0) - occupiedSeats);
+            const utilization = settings.totalSeats ? ((occupiedSeats / settings.totalSeats) * 100).toFixed(2) : 0;
+
+            let html = '<div class="report"><h2>Seat Utilization Report</h2>';
+            html += '<p class="report-date">Generated on: ' + new Date().toLocaleDateString('en-IN') + '</p>';
+            html += '<div class="report-summary">';
+            html += '<div class="summary-item"><span>Total Seats:</span><strong>' + (settings.totalSeats || 0) + '</strong></div>';
+            html += '<div class="summary-item"><span>Occupied Seats:</span><strong>' + occupiedSeats + '</strong></div>';
+            html += '<div class="summary-item"><span>Vacant Seats:</span><strong>' + vacantSeats + '</strong></div>';
+            html += '<div class="summary-item"><span>Utilization Rate:</span><strong>' + utilization + '%</strong></div>';
+            html += '</div><h3>Occupied Seats Details</h3>';
+            html += '<table class="data-table"><thead><tr><th>Seat No.</th><th>Student Name</th><th>Shift</th><th>Joining Date</th></tr></thead><tbody>';
+
+            const occupiedSeatsList = students.filter(s => s.status === 'Active' && s.seatNumber)
+                .sort((a, b) => parseInt(a.seatNumber) - parseInt(b.seatNumber));
+
+            if (occupiedSeatsList.length === 0) {
+                html += '<tr><td colspan="4" class="empty-state">No occupied seats.</td></tr>';
+            } else {
+                occupiedSeatsList.forEach(student => {
+                    html += '<tr>';
+                    html += '<td>' + student.seatNumber + '</td>';
+                    html += '<td>' + student.name + '</td>';
+                    html += '<td>' + (student.shift || '-') + '</td>';
+                    html += '<td>' + new Date(student.joiningDate).toLocaleDateString('en-IN') + '</td>';
+                    html += '</tr>';
+                });
+            }
+
+            html += '</tbody></table></div>';
+
+            currentReportData = {
+                title: 'Seat Utilization Report',
+                summary: { total: settings.totalSeats, occupied: occupiedSeats, vacant: vacantSeats, utilization: utilization },
+                data: occupiedSeatsList
+            };
+
+            document.getElementById('reportContainer').innerHTML = html;
+            document.getElementById('exportSection').style.display = 'block';
+        }
+
+        function generatePaymentReport() {
+            const payments = JSON.parse(localStorage.getItem('payments')) || [];
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+
+            let html = '<div class="report"><h2>Payment Report</h2>';
+            html += '<p class="report-date">Generated on: ' + new Date().toLocaleDateString('en-IN') + '</p>';
+            html += '<div class="report-summary">';
+
+            const paidPayments = payments.filter(p => p.status === 'Paid');
+            const unpaidPayments = payments.filter(p => p.status === 'Unpaid');
+            const totalPaid = paidPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+            const totalUnpaid = unpaidPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+            html += '<div class="summary-item"><span>Total Paid:</span><strong>₹' + totalPaid.toLocaleString('en-IN') + '</strong></div>';
+            html += '<div class="summary-item"><span>Total Unpaid:</span><strong>₹' + totalUnpaid.toLocaleString('en-IN') + '</strong></div>';
+            html += '<div class="summary-item"><span>Total Due:</span><strong>₹' + (totalPaid + totalUnpaid).toLocaleString('en-IN') + '</strong></div>';
+            html += '</div><h3>Payment Details</h3>';
+            html += '<table class="data-table"><thead><tr><th>Student Name</th><th>Notes</th><th>Amount</th><th>Status</th><th>Due Date</th><th>Payment Date</th></tr></thead><tbody>';
+
+            if (payments.length === 0) {
+                html += '<tr><td colspan="6" class="empty-state">No payment records found.</td></tr>';
+            } else {
+                payments.forEach(payment => {
+                    const student = students.find(s => s.id === payment.studentId);
+                    if (student) {
+                        html += '<tr>';
+                        html += '<td>' + student.name + '</td>';
+                        html += '<td>' + (payment.notes || '-') + '</td>';
+                        html += '<td>₹' + parseFloat(payment.amount).toLocaleString('en-IN') + '</td>';
+                        html += '<td><span class="status-badge ' + payment.status.toLowerCase() + '">' + payment.status + '</span></td>';
+                        html += '<td>' + (payment.dueDate ? new Date(payment.dueDate).toLocaleDateString('en-IN') : '-') + '</td>';
+                        html += '<td>' + (payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('en-IN') : '-') + '</td>';
+                        html += '</tr>';
+                    }
+                });
+            }
+
+            html += '</tbody></table></div>';
+
+            const paymentData = payments.map(p => {
+                const student = students.find(s => s.id === p.studentId);
+                return {
+                    'studentname': student ? student.name : '',
+                    'notes': p.notes || '-',
+                    'amount': '₹' + parseFloat(p.amount).toLocaleString('en-IN'),
+                    'status': p.status,
+                    'duedate': p.dueDate ? new Date(p.dueDate).toLocaleDateString('en-IN') : '-',
+                    'paymentdate': p.paymentDate ? new Date(p.paymentDate).toLocaleDateString('en-IN') : '-'
+                };
+            });
+
+            currentReportData = {
+                title: 'Payment Report',
+                headers: ['StudentName', 'Notes', 'Amount', 'Status', 'DueDate', 'PaymentDate'],
+                data: paymentData
+            };
+
+            document.getElementById('reportContainer').innerHTML = html;
+            document.getElementById('exportSection').style.display = 'block';
+        }
+
+        function exportToExcel() {
+            if (!currentReportData) return;
+
+            let csvContent = 'data:text/csv;charset=utf-8,';
+            csvContent += currentReportData.title + '\n';
+            csvContent += 'Generated on: ' + new Date().toLocaleDateString('en-IN') + '\n\n';
+
+            if (currentReportData.headers) {
+                csvContent += currentReportData.headers.join(',') + '\n';
+                currentReportData.data.forEach(item => {
+                    const row = currentReportData.headers.map(header => {
+                        let value = item[header.toLowerCase().replace(/\s+/g, '')] || '';
+                        if (typeof value === 'string' && value.includes(',')) {
+                            value = '"' + value + '"';
+                        }
+                        return value;
+                    }).join(',');
+                    csvContent += row + '\n';
+                });
+            }
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', currentReportData.title.replace(/\s+/g, '_') + '.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function printReport() {
+            const reportContent = document.getElementById('reportContainer').innerHTML;
+            const printWindow = window.open('', '', 'width=900,height=600');
+            printWindow.document.write('<html><head><title>' + currentReportData.title + '</title><link rel="stylesheet" href="styles.css"></head><body>' + reportContent + '</body></html>');
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 250);
+        }
+    </script>
+</body>
+</html>

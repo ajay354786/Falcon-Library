@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Falcon Library</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="navbar-brand">FALCON LIBRARY</div>
+            <ul class="navbar-menu">
+                <li><a href="dashboard.html" class="active">Dashboard</a></li>
+                <li><a href="students.html">Students</a></li>
+                <li><a href="seats.html">Seats</a></li>
+                <li><a href="shifts.html">Shifts</a></li>
+                <li><a href="reports.html">Reports</a></li>
+                <li><a href="settings.html">Settings</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Dashboard</h1>
+                <p class="page-subtitle">Welcome back, Admin</p>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="dashboard-grid">
+                <div class="metric-card">
+                    <div class="metric-icon total-seats">📊</div>
+                    <div class="metric-content">
+                        <p class="metric-label">Total Seats</p>
+                        <p class="metric-value" id="totalSeats">0</p>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon total-students">👥</div>
+                    <div class="metric-content">
+                        <p class="metric-label">Active Students</p>
+                        <p class="metric-value" id="activeStudents">0</p>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon vacant-seats">🪑</div>
+                    <div class="metric-content">
+                        <p class="metric-label">Vacant Seats</p>
+                        <p class="metric-value" id="vacantSeats">0</p>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon payment">💰</div>
+                    <div class="metric-content">
+                        <p class="metric-label">Monthly Collections</p>
+                        <p class="metric-value" id="monthlyCollection">₹0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activities & Payment Status -->
+            <div class="dashboard-section">
+                <div class="section-left">
+                    <h2>Payment Status Summary</h2>
+                    <div class="payment-summary">
+                        <div class="payment-item">
+                            <span class="payment-status paid">Paid</span>
+                            <span class="payment-count" id="paidCount">0</span>
+                        </div>
+                        <div class="payment-item">
+                            <span class="payment-status unpaid">Unpaid</span>
+                            <span class="payment-count" id="unpaidCount">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-right">
+                    <h2>Shift Occupancy</h2>
+                    <div class="shift-summary">
+                        <div class="shift-item">
+                            <span class="shift-name">Morning</span>
+                            <span class="shift-count" id="morningCount">0</span>
+                        </div>
+                        <div class="shift-item">
+                            <span class="shift-name">Evening</span>
+                            <span class="shift-count" id="eveningCount">0</span>
+                        </div>
+                        <div class="shift-item">
+                            <span class="shift-name">Full Day</span>
+                            <span class="shift-count" id="fullDayCount">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <h2>Quick Actions</h2>
+                <div class="action-buttons">
+                    <a href="students.html?action=add" class="btn btn-secondary">+ Add Student</a>
+                    <a href="seats.html" class="btn btn-secondary">Manage Seats</a>
+                    <a href="students.html" class="btn btn-secondary">Manage Students</a>
+                    <a href="reports.html" class="btn btn-secondary">View Reports</a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            updateDashboard();
+        });
+
+        function updateDashboard() {
+            const settings = JSON.parse(localStorage.getItem('settings')) || {};
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+            const seats = JSON.parse(localStorage.getItem('seats')) || [];
+            const payments = JSON.parse(localStorage.getItem('payments')) || [];
+
+            // Total Seats
+            document.getElementById('totalSeats').textContent = settings.totalSeats || 0;
+
+            // Active Students
+            const activeStudents = students.filter(s => s.status === 'Active').length;
+            document.getElementById('activeStudents').textContent = activeStudents;
+
+            // Vacant Seats
+            const occupiedSeats = students.filter(s => s.status === 'Active' && s.seatNumber).length;
+            const vacantSeats = Math.max(0, (settings.totalSeats || 0) - occupiedSeats);
+            document.getElementById('vacantSeats').textContent = vacantSeats;
+
+            // Monthly Collection
+            const currentMonth = new Date().toLocaleString('default', { month: '2-digit', year: 'numeric' });
+            const monthlyPayments = payments.filter(p => p.month === currentMonth && p.status === 'Paid');
+            const monthlyTotal = monthlyPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+            document.getElementById('monthlyCollection').textContent = '₹' + monthlyTotal.toLocaleString('en-IN');
+
+            // Payment Status
+            const paidCount = payments.filter(p => p.status === 'Paid').length;
+            const unpaidCount = payments.filter(p => p.status === 'Unpaid').length;
+            document.getElementById('paidCount').textContent = paidCount;
+            document.getElementById('unpaidCount').textContent = unpaidCount;
+
+            // Shift Occupancy
+            const morningCount = students.filter(s => s.shift === 'Morning' && s.status === 'Active').length;
+            const eveningCount = students.filter(s => s.shift === 'Evening' && s.status === 'Active').length;
+            const fullDayCount = students.filter(s => s.shift === 'Full Day' && s.status === 'Active').length;
+            document.getElementById('morningCount').textContent = morningCount;
+            document.getElementById('eveningCount').textContent = eveningCount;
+            document.getElementById('fullDayCount').textContent = fullDayCount;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seat Management - Falcon Library</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="navbar-brand">FALCON LIBRARY</div>
+            <ul class="navbar-menu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="students.html">Students</a></li>
+                <li><a href="seats.html" class="active">Seats</a></li>
+                <li><a href="shifts.html">Shifts</a></li>
+                <li><a href="reports.html">Reports</a></li>
+                <li><a href="settings.html">Settings</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Seat Management</h1>
+            </div>
+
+            <!-- Seat Statistics -->
+            <div class="seat-stats">
+                <div class="stat-box">
+                    <span class="stat-label">Total Seats:</span>
+                    <span class="stat-value" id="totalSeatsCount">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Occupied:</span>
+                    <span class="stat-value" id="occupiedCount">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Vacant:</span>
+                    <span class="stat-value" id="vacantCount">0</span>
+                </div>
+            </div>
+
+            <!-- Seat Grid View -->
+            <div class="seat-container" id="seatGrid">
+                <!-- Seats will be loaded here -->
+            </div>
+
+            <!-- Seat Legend -->
+            <div class="seat-legend">
+                <div class="legend-item">
+                    <span class="legend-box vacant"></span> Vacant
+                </div>
+                <div class="legend-item">
+                    <span class="legend-box occupied"></span> Occupied
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Seat Assignment Modal -->
+    <div id="seatModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Assign Seat</h2>
+                <span class="close" onclick="closeSeatModal()">&times;</span>
+            </div>
+            <form onsubmit="assignSeat(event)">
+                <div class="form-group">
+                    <label>Seat Number:</label>
+                    <input type="text" id="seatNumber" readonly style="background-color: #f0f0f0;">
+                </div>
+
+                <div class="form-group">
+                    <label>Select Student *</label>
+                    <select id="seatStudent" required>
+                        <option value="">Choose a student</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Shift *</label>
+                    <select id="seatShift" required>
+                        <option value="">Choose a shift</option>
+                        <option value="Morning">Morning</option>
+                        <option value="Evening">Evening</option>
+                        <option value="Full Day">Full Day</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Assign</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeSeatModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let currentSeat = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            loadSeatGrid();
+        });
+
+        function loadSeatGrid() {
+            const settings = JSON.parse(localStorage.getItem('settings')) || { totalSeats: 0 };
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+            const seatGrid = document.getElementById('seatGrid');
+            
+            seatGrid.innerHTML = '';
+            
+            let occupied = 0;
+            let vacant = 0;
+
+            for (let i = 1; i <= (settings.totalSeats || 0); i++) {
+                const student = students.find(s => s.seatNumber == i && s.status === 'Active');
+                const seatElement = document.createElement('div');
+                seatElement.className = `seat ${student ? 'occupied' : 'vacant'}`;
+                seatElement.innerHTML = `<span>${i}</span>`;
+                
+                if (student) {
+                    occupied++;
+                    seatElement.title = `${student.name} - ${student.shift || 'N/A'}`;
+                } else {
+                    vacant++;
+                }
+                
+                seatElement.onclick = () => openSeatModal(i, students);
+                seatGrid.appendChild(seatElement);
+            }
+
+            document.getElementById('totalSeatsCount').textContent = settings.totalSeats || 0;
+            document.getElementById('occupiedCount').textContent = occupied;
+            document.getElementById('vacantCount').textContent = vacant;
+        }
+
+        function openSeatModal(seatNum, students) {
+            currentSeat = seatNum;
+            document.getElementById('seatNumber').value = seatNum;
+            
+            // Load active students
+            const studentSelect = document.getElementById('seatStudent');
+            studentSelect.innerHTML = '<option value="">Choose a student</option>';
+            
+            const activeStudents = students.filter(s => s.status === 'Active');
+            activeStudents.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = `${student.name} (${student.mobile})`;
+                studentSelect.appendChild(option);
+            });
+
+            document.getElementById('seatModal').style.display = 'block';
+        }
+
+        function closeSeatModal() {
+            document.getElementById('seatModal').style.display = 'none';
+        }
+
+        function assignSeat(event) {
+            event.preventDefault();
+            
+            const studentId = parseInt(document.getElementById('seatStudent').value);
+            const shift = document.getElementById('seatShift').value;
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+            
+            const student = students.find(s => s.id === studentId);
+            if (student) {
+                student.seatNumber = currentSeat;
+                student.shift = shift;
+                
+                localStorage.setItem('students', JSON.stringify(students));
+                closeSeatModal();
+                loadSeatGrid();
+                alert('Seat assigned successfully!');
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('seatModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

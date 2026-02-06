@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Management - Falcon Library</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="navbar-brand">FALCON LIBRARY</div>
+            <ul class="navbar-menu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="students.html">Students</a></li>
+                <li><a href="seats.html">Seats</a></li>
+                <li><a href="shifts.html">Shifts</a></li>
+                <li><a href="payments.html" class="active">Payments</a></li>
+                <li><a href="reports.html">Reports</a></li>
+                <li><a href="settings.html">Settings</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Payment Management</h1>
+                <button class="btn btn-primary" onclick="openPaymentModal()">+ Record Payment</button>
+            </div>
+
+            <!-- Filter -->
+            <div class="filter-section">
+                <select id="paymentStatusFilter" class="filter-select">
+                    <option value="">All Payments</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Unpaid">Unpaid</option>
+                </select>
+                <input type="month" id="paymentMonthFilter" class="filter-select" style="padding: 8px 12px;">
+            </div>
+
+            <!-- Payments Table -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Mobile</th>
+                            <th>Month</th>
+                            <th>Amount</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Payment Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentTable">
+                        <tr>
+                            <td colspan="8" class="empty-state">No payment records found.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="paymentModalTitle">Record Payment</h2>
+                <span class="close" onclick="closePaymentModal()">&times;</span>
+            </div>
+            <form id="paymentForm" onsubmit="savePayment(event)">
+                <input type="hidden" id="paymentId">
+                
+                <div class="form-group">
+                    <label>Student *</label>
+                    <select id="paymentStudent" required>
+                        <option value="">Select a student</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Month *</label>
+                        <input type="month" id="paymentMonth" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount *</label>
+                        <input type="number" id="paymentAmount" required min="0" step="0.01">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Payment Status *</label>
+                        <select id="paymentStatus" required>
+                            <option value="Paid">Paid</option>
+                            <option value="Unpaid">Unpaid</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Date</label>
+                        <input type="date" id="paymentDate">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Due Date</label>
+                    <input type="date" id="paymentDueDate">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closePaymentModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            loadPayments();
+            loadPaymentStudents();
+            setupPaymentFilters();
+        });
+
+        function loadPaymentStudents() {
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+            const studentSelect = document.getElementById('paymentStudent');
+            
+            studentSelect.innerHTML = '<option value="">Select a student</option>';
+            
+            students.filter(s => s.status === 'Active').forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = `${student.name} (${student.mobile})`;
+                studentSelect.appendChild(option);
+            });
+        }
+
+        function loadPayments() {
+            const payments = JSON.parse(localStorage.getItem('payments')) || [];
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+            const tbody = document.getElementById('paymentTable');
+            
+            tbody.innerHTML = '';
+
+            if (payments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No payment records found.</td></tr>';
+                return;
+            }
+
+            payments.forEach(payment => {
+                const student = students.find(s => s.id === payment.studentId);
+                if (student) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${student.name}</td>
+                        <td>${student.mobile}</td>
+                        <td>${formatMonth(payment.month)}</td>
+                        <td>₹${parseFloat(payment.amount).toLocaleString('en-IN')}</td>
+                        <td>${new Date(payment.dueDate).toLocaleDateString('en-IN')}</td>
+                        <td><span class="status-badge ${payment.status.toLowerCase()}">${payment.status}</span></td>
+                        <td>${payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('en-IN') : '-'}</td>
+                        <td>
+                            <button class="btn-small" onclick="editPayment(${payment.id})">Edit</button>
+                            <button class="btn-small btn-danger" onclick="deletePayment(${payment.id})">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            });
+        }
+
+        function formatMonth(monthStr) {
+            const [year, month] = monthStr.split('-');
+            const date = new Date(year, month - 1);
+            return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+        }
+
+        function setupPaymentFilters() {
+            document.getElementById('paymentStatusFilter').addEventListener('change', filterPayments);
+            document.getElementById('paymentMonthFilter').addEventListener('change', filterPayments);
+        }
+
+        function filterPayments() {
+            const status = document.getElementById('paymentStatusFilter').value;
+            const month = document.getElementById('paymentMonthFilter').value;
+            
+            const payments = JSON.parse(localStorage.getItem('payments')) || [];
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+            
+            let filtered = payments;
+            
+            if (status) {
+                filtered = filtered.filter(p => p.status === status);
+            }
+            
+            if (month) {
+                filtered = filtered.filter(p => p.month === month);
+            }
+
+            displayFilteredPayments(filtered, students);
+        }
+
+        function displayFilteredPayments(filtered, students) {
+            const tbody = document.getElementById('paymentTable');
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No payment records found.</td></tr>';
+                return;
+            }
+
+            filtered.forEach(payment => {
+                const student = students.find(s => s.id === payment.studentId);
+                if (student) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${student.name}</td>
+                        <td>${student.mobile}</td>
+                        <td>${formatMonth(payment.month)}</td>
+                        <td>₹${parseFloat(payment.amount).toLocaleString('en-IN')}</td>
+                        <td>${new Date(payment.dueDate).toLocaleDateString('en-IN')}</td>
+                        <td><span class="status-badge ${payment.status.toLowerCase()}">${payment.status}</span></td>
+                        <td>${payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('en-IN') : '-'}</td>
+                        <td>
+                            <button class="btn-small" onclick="editPayment(${payment.id})">Edit</button>
+                            <button class="btn-small btn-danger" onclick="deletePayment(${payment.id})">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            });
+        }
+
+        function openPaymentModal() {
+            document.getElementById('paymentId').value = '';
+            document.getElementById('paymentForm').reset();
+            document.getElementById('paymentModalTitle').textContent = 'Record Payment';
+            
+            const now = new Date();
+            const monthStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+            document.getElementById('paymentMonth').value = monthStr;
+            
+            document.getElementById('paymentModal').style.display = 'block';
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').style.display = 'none';
+        }
+
+        function editPayment(id) {
+            const payments = JSON.parse(localStorage.getItem('payments')) || [];
+            const payment = payments.find(p => p.id === id);
+            
+            if (payment) {
+                document.getElementById('paymentId').value = payment.id;
+                document.getElementById('paymentStudent').value = payment.studentId;
+                document.getElementById('paymentMonth').value = payment.month;
+                document.getElementById('paymentAmount').value = payment.amount;
+                document.getElementById('paymentStatus').value = payment.status;
+                document.getElementById('paymentDate').value = payment.paymentDate || '';
+                document.getElementById('paymentDueDate').value = payment.dueDate || '';
+                document.getElementById('paymentModalTitle').textContent = 'Edit Payment';
+                document.getElementById('paymentModal').style.display = 'block';
+            }
+        }
+
+        function savePayment(event) {
+            event.preventDefault();
+            
+            const payments = JSON.parse(localStorage.getItem('payments')) || [];
+            const id = document.getElementById('paymentId').value;
+            
+            const paymentData = {
+                id: id ? parseInt(id) : Date.now(),
+                studentId: parseInt(document.getElementById('paymentStudent').value),
+                month: document.getElementById('paymentMonth').value,
+                amount: document.getElementById('paymentAmount').value,
+                status: document.getElementById('paymentStatus').value,
+                paymentDate: document.getElementById('paymentDate').value,
+                dueDate: document.getElementById('paymentDueDate').value
+            };
+
+            const existingIndex = payments.findIndex(p => p.id === paymentData.id);
+            
+            if (existingIndex > -1) {
+                payments[existingIndex] = paymentData;
+            } else {
+                payments.push(paymentData);
+            }
+            
+            localStorage.setItem('payments', JSON.stringify(payments));
+            closePaymentModal();
+            loadPayments();
+            alert('Payment saved successfully!');
+        }
+
+        function deletePayment(id) {
+            if (confirm('Are you sure you want to delete this payment record?')) {
+                const payments = JSON.parse(localStorage.getItem('payments')) || [];
+                const filtered = payments.filter(p => p.id !== id);
+                localStorage.setItem('payments', JSON.stringify(filtered));
+                loadPayments();
+                alert('Payment record deleted successfully!');
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('paymentModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

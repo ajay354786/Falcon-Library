@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Falcon Library</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="navbar-brand">FALCON LIBRARY</div>
+            <ul class="navbar-menu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="students.html">Students</a></li>
+                <li><a href="seats.html">Seats</a></li>
+                <li><a href="shifts.html">Shifts</a></li>
+                <li><a href="reports.html">Reports</a></li>
+                <li><a href="settings.html" class="active">Settings</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Settings</h1>
+            </div>
+
+            <!-- Settings Sections -->
+            <div class="settings-container">
+                <!-- Basic Settings -->
+                <section class="settings-section">
+                    <h2>Library Configuration</h2>
+                    
+                    <div class="form-group">
+                        <label>Library Name</label>
+                        <input type="text" id="libraryName" value="FALCON LIBRARY" readonly style="background-color: #f0f0f0;">
+                        <small>The name of your library</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Total Seats *</label>
+                        <input type="number" id="totalSeats" required min="1">
+                        <small>Total number of seats available in the library</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Monthly Fee (₹) *</label>
+                        <input type="number" id="monthlyFee" required min="0" step="0.01">
+                        <small>Default monthly fee for students</small>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="saveBasicSettings()">Save Settings</button>
+                </section>
+
+                <!-- Shift Timings -->
+                <section class="settings-section">
+                    <h2>Shift Timings</h2>
+                    
+                    <div class="shift-settings-grid">
+                        <div class="shift-time-card">
+                            <h3>🌅 Morning</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Start Time</label>
+                                    <input type="time" id="morningStart">
+                                </div>
+                                <div class="form-group">
+                                    <label>End Time</label>
+                                    <input type="time" id="morningEnd">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="shift-time-card">
+                            <h3>🌆 Evening</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Start Time</label>
+                                    <input type="time" id="eveningStart">
+                                </div>
+                                <div class="form-group">
+                                    <label>End Time</label>
+                                    <input type="time" id="eveningEnd">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="shift-time-card">
+                            <h3>☀️ Full Day</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Start Time</label>
+                                    <input type="time" id="fullDayStart">
+                                </div>
+                                <div class="form-group">
+                                    <label>End Time</label>
+                                    <input type="time" id="fullDayEnd">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="saveShiftSettings()">Save Shift Timings</button>
+                </section>
+
+                <!-- Library Rules -->
+                <section class="settings-section">
+                    <h2>Library Rules & Policies</h2>
+                    
+                    <div class="form-group">
+                        <label>Library Rules (Optional)</label>
+                        <textarea id="libraryRules" rows="8" placeholder="Enter your library rules and policies here..."></textarea>
+                        <small>This text will be displayed to students and in reports</small>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="saveLibraryRules()">Save Rules</button>
+                </section>
+
+                <!-- Data Management -->
+                <section class="settings-section danger-section">
+                    <h2>Data Management</h2>
+                    
+                    <div class="data-actions">
+                        <p>Manage your library data:</p>
+                        <button class="btn btn-secondary" onclick="exportAllData()">📥 Export All Data</button>
+                        <button class="btn btn-secondary" onclick="downloadBackup()">💾 Download Backup</button>
+                        <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
+                    </div>
+                </section>
+
+                <!-- Admin Account -->
+                <section class="settings-section">
+                    <h2>Admin Account</h2>
+                    
+                    <div class="form-group">
+                        <label>Change Admin Password</label>
+                        <input type="password" id="currentPassword" placeholder="Current password">
+                        <input type="password" id="newPassword" placeholder="New password">
+                        <input type="password" id="confirmPassword" placeholder="Confirm password">
+                    </div>
+
+                    <button class="btn btn-primary" onclick="changeAdminPassword()">Change Password</button>
+                </section>
+
+                <!-- System Info -->
+                <section class="settings-section">
+                    <h2>System Information</h2>
+                    <div class="info-box">
+                        <p><strong>Application:</strong> Falcon Library Management System</p>
+                        <p><strong>Version:</strong> 1.0</p>
+                        <p><strong>Last Updated:</strong> <span id="lastUpdated">-</span></p>
+                        <p><strong>Storage Used:</strong> <span id="storageUsed">-</span></p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            loadSettings();
+            updateSystemInfo();
+        });
+
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('settings')) || {};
+            const shifts = JSON.parse(localStorage.getItem('shifts')) || {};
+            
+            document.getElementById('totalSeats').value = settings.totalSeats || 0;
+            document.getElementById('monthlyFee').value = settings.monthlyFee || 0;
+
+            document.getElementById('morningStart').value = shifts.morning?.start || '06:00';
+            document.getElementById('morningEnd').value = shifts.morning?.end || '12:00';
+            document.getElementById('eveningStart').value = shifts.evening?.start || '14:00';
+            document.getElementById('eveningEnd').value = shifts.evening?.end || '20:00';
+            document.getElementById('fullDayStart').value = shifts.fullDay?.start || '06:00';
+            document.getElementById('fullDayEnd').value = shifts.fullDay?.end || '20:00';
+
+            document.getElementById('libraryRules').value = settings.libraryRules || '';
+        }
+
+        function saveBasicSettings() {
+            const settings = JSON.parse(localStorage.getItem('settings')) || {};
+            
+            settings.totalSeats = parseInt(document.getElementById('totalSeats').value);
+            settings.monthlyFee = parseFloat(document.getElementById('monthlyFee').value);
+            
+            localStorage.setItem('settings', JSON.stringify(settings));
+            alert('Settings saved successfully!');
+        }
+
+        function saveShiftSettings() {
+            const shifts = {
+                morning: {
+                    start: document.getElementById('morningStart').value,
+                    end: document.getElementById('morningEnd').value
+                },
+                evening: {
+                    start: document.getElementById('eveningStart').value,
+                    end: document.getElementById('eveningEnd').value
+                },
+                fullDay: {
+                    start: document.getElementById('fullDayStart').value,
+                    end: document.getElementById('fullDayEnd').value
+                }
+            };
+            
+            localStorage.setItem('shifts', JSON.stringify(shifts));
+            alert('Shift timings saved successfully!');
+        }
+
+        function saveLibraryRules() {
+            const settings = JSON.parse(localStorage.getItem('settings')) || {};
+            settings.libraryRules = document.getElementById('libraryRules').value;
+            
+            localStorage.setItem('settings', JSON.stringify(settings));
+            alert('Library rules saved successfully!');
+        }
+
+        function changeAdminPassword() {
+            const current = document.getElementById('currentPassword').value;
+            const newPass = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+
+            const users = JSON.parse(localStorage.getItem('users')) || [{ username: 'admin', password: 'admin123' }];
+            const admin = users[0];
+
+            if (current !== admin.password) {
+                alert('Current password is incorrect!');
+                return;
+            }
+
+            if (newPass !== confirm) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            if (newPass.length < 6) {
+                alert('Password must be at least 6 characters!');
+                return;
+            }
+
+            admin.password = newPass;
+            localStorage.setItem('users', JSON.stringify(users));
+            
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            
+            alert('Password changed successfully!');
+        }
+
+        function exportAllData() {
+            const data = {
+                settings: JSON.parse(localStorage.getItem('settings')) || {},
+                students: JSON.parse(localStorage.getItem('students')) || [],
+                payments: JSON.parse(localStorage.getItem('payments')) || [],
+                shifts: JSON.parse(localStorage.getItem('shifts')) || {},
+                exportDate: new Date().toLocaleDateString('en-IN')
+            };
+
+            const jsonString = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `falcon-library-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadBackup() {
+            exportAllData();
+            alert('Backup downloaded successfully!');
+        }
+
+        function clearAllData() {
+            if (confirm('⚠️ WARNING: This will delete ALL data including students, payments, and settings!\n\nAre you sure you want to continue?')) {
+                if (confirm('This action cannot be undone. Type "DELETE" to confirm.')) {
+                    const confirmation = prompt('Type DELETE to confirm:');
+                    if (confirmation === 'DELETE') {
+                        localStorage.clear();
+                        alert('All data has been cleared!');
+                        window.location.href = 'index.html';
+                    }
+                }
+            }
+        }
+
+        function updateSystemInfo() {
+            const lastUpdate = localStorage.getItem('lastUpdate') || 'Never';
+            document.getElementById('lastUpdated').textContent = lastUpdate;
+
+            let totalSize = 0;
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key)) {
+                    totalSize += localStorage[key].length + key.length;
+                }
+            }
+
+            const sizeInKB = (totalSize / 1024).toFixed(2);
+            document.getElementById('storageUsed').textContent = sizeInKB + ' KB';
+        }
+    </script>
+</body>
+</html>

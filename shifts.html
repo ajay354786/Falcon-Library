@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shift Management - Falcon Library</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="navbar-brand">FALCON LIBRARY</div>
+            <ul class="navbar-menu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="students.html">Students</a></li>
+                <li><a href="seats.html">Seats</a></li>
+                <li><a href="shifts.html" class="active">Shifts</a></li>
+                <li><a href="reports.html">Reports</a></li>
+                <li><a href="settings.html">Settings</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Shift Management</h1>
+            </div>
+
+            <!-- Shift Timings -->
+            <div class="shift-settings">
+                <h2>Shift Timings</h2>
+                <div class="shift-grid">
+                    <div class="shift-card">
+                        <h3>Morning</h3>
+                        <input type="time" id="morningStart" placeholder="Start time">
+                        <span>to</span>
+                        <input type="time" id="morningEnd" placeholder="End time">
+                    </div>
+                    <div class="shift-card">
+                        <h3>Evening</h3>
+                        <input type="time" id="eveningStart" placeholder="Start time">
+                        <span>to</span>
+                        <input type="time" id="eveningEnd" placeholder="End time">
+                    </div>
+                    <div class="shift-card">
+                        <h3>Full Day</h3>
+                        <input type="time" id="fullDayStart" placeholder="Start time">
+                        <span>to</span>
+                        <input type="time" id="fullDayEnd" placeholder="End time">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="saveShiftTimings()">Save Timings</button>
+            </div>
+
+            <!-- Students by Shift -->
+            <h2>Students by Shift</h2>
+            <div class="shift-tabs">
+                <button class="tab-button active" onclick="showShiftStudents('Morning')">Morning</button>
+                <button class="tab-button" onclick="showShiftStudents('Evening')">Evening</button>
+                <button class="tab-button" onclick="showShiftStudents('Full Day')">Full Day</button>
+            </div>
+
+            <!-- Shift Students Table -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Mobile</th>
+                            <th>Seat</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shiftStudentsTable">
+                        <tr>
+                            <td colspan="5" class="empty-state">No students in this shift</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let currentShift = 'Morning';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            loadShiftTimings();
+            showShiftStudents('Morning');
+        });
+
+        function loadShiftTimings() {
+            const shifts = JSON.parse(localStorage.getItem('shifts')) || {};
+            
+            document.getElementById('morningStart').value = shifts.morning?.start || '06:00';
+            document.getElementById('morningEnd').value = shifts.morning?.end || '12:00';
+            document.getElementById('eveningStart').value = shifts.evening?.start || '14:00';
+            document.getElementById('eveningEnd').value = shifts.evening?.end || '20:00';
+            document.getElementById('fullDayStart').value = shifts.fullDay?.start || '06:00';
+            document.getElementById('fullDayEnd').value = shifts.fullDay?.end || '20:00';
+        }
+
+        function saveShiftTimings() {
+            const shifts = {
+                morning: {
+                    start: document.getElementById('morningStart').value,
+                    end: document.getElementById('morningEnd').value
+                },
+                evening: {
+                    start: document.getElementById('eveningStart').value,
+                    end: document.getElementById('eveningEnd').value
+                },
+                fullDay: {
+                    start: document.getElementById('fullDayStart').value,
+                    end: document.getElementById('fullDayEnd').value
+                }
+            };
+            
+            localStorage.setItem('shifts', JSON.stringify(shifts));
+            alert('Shift timings saved successfully!');
+        }
+
+        function showShiftStudents(shift) {
+            currentShift = shift;
+            
+            // Update active tab
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            const students = JSON.parse(localStorage.getItem('students')) || [];
+            const shiftStudents = students.filter(s => s.shift === shift && s.status === 'Active');
+            
+            const tbody = document.getElementById('shiftStudentsTable');
+            tbody.innerHTML = '';
+
+            if (shiftStudents.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No students in this shift</td></tr>';
+                return;
+            }
+
+            shiftStudents.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${student.name}</td>
+                    <td>${student.mobile}</td>
+                    <td>Seat ${student.seatNumber || '-'}</td>
+                    <td><span class="status-badge active">Active</span></td>
+                    <td>
+                        <button class="btn-small" onclick="editShiftStudent(${student.id})">Edit</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function editShiftStudent(studentId) {
+            window.location.href = `students.html`;
+        }
+    </script>
+</body>
+</html>

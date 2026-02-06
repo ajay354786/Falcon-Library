@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Falcon Library - Getting Started</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .card {
+            background: #f5f5f5;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            background: #e8f0f7;
+            transform: translateY(-5px);
+        }
+        
+        .card h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .card p {
+            color: #555;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .card-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .steps {
+            background: #f5f5f5;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .step {
+            display: flex;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .step:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+        
+        .step-content h4 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .step-content p {
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .code {
+            background: #2c3e50;
+            color: #27ae60;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+            text-align: center;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #ecf0f1;
+            color: #2c3e50;
+            border: 1px solid #bdc3c7;
+        }
+        
+        .btn-secondary:hover {
+            background: #d5dbdb;
+        }
+        
+        .info-box {
+            background: #e8f4fd;
+            border-left: 4px solid #3498db;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .info-box h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .info-box p {
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .docs-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .doc-item {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .doc-item a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .doc-item a:hover {
+            color: #5a67d8;
+            text-decoration: underline;
+        }
+        
+        .doc-item p {
+            color: #555;
+            font-size: 13px;
+        }
+        
+        .footer {
+            background: #ecf0f1;
+            padding: 20px 30px;
+            text-align: center;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .credentials {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .credentials h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .credentials p {
+            color: #856404;
+            font-size: 14px;
+            margin: 5px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                padding: 25px 20px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 28px;
+            }
+            
+            .section h2 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 FALCON LIBRARY</h1>
+            <p>Library Management System - Getting Started</p>
+        </div>
+        
+        <div class="content">
+            <!-- Quick Start Section -->
+            <div class="section">
+                <h2>⚡ Quick Start (3 Steps)</h2>
+                
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Click the Button Below</h4>
+                            <p>Start using the application by clicking the "Go to Dashboard" button. Your demo account is ready!</p>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Login with Demo Credentials</h4>
+                            <p><strong>Username:</strong> admin | <strong>Password:</strong> admin123</p>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Configure Your Library</h4>
+                            <p>Go to Settings → Set your total seats and monthly fee → Start adding students!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Demo Credentials -->
+            <div class="credentials">
+                <h4>🔐 Demo Credentials</h4>
+                <p>Username: <strong>admin</strong></p>
+                <p>Password: <strong>admin123</strong></p>
+                <p style="margin-top: 15px; font-size: 12px; color: #856404;">⚠️ Change this password immediately after first login!</p>
+            </div>
+            
+            <!-- Main Features -->
+            <div class="section">
+                <h2>✨ Main Features</h2>
+                
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-icon">📊</div>
+                        <h3>Dashboard</h3>
+                        <p>View all important statistics at a glance - total seats, active students, vacant seats, monthly collections.</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-icon">👥</div>
+                        <h3>Student Management</h3>
+                        <p>Add, edit, and manage student records with photos, contact details, and enrollment status.</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-icon">🪑</div>
+                        <h3>Seat Management</h3>
+                        <p>Visual grid for seat allocation with real-time occupancy tracking and shift assignments.</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-icon">⏰</div>
+                        <h3>Shift Management</h3>
+                        <p>Configure and manage morning, evening, and full-day shifts with custom timings.</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-icon">💰</div>
+                        <h3>Payment Tracking</h3>
+                        <p>Record and track monthly fee payments with status tracking and due date management.</p>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-icon">📋</div>
+                        <h3>Reports</h3>
+                        <p>Generate student lists, seat utilization, and payment reports with export functionality.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="section">
+                <h2>🚀 Start Using Now</h2>
+                <div class="buttons">
+                    <a href="dashboard.html" class="btn btn-primary">↗️ Go to Dashboard</a>
+                    <a href="README.md" class="btn btn-secondary">📖 Read Full Guide</a>
+                </div>
+            </div>
+            
+            <!-- Documentation Section -->
+            <div class="section">
+                <h2>📚 Documentation</h2>
+                
+                <div class="docs-list">
+                    <div class="doc-item">
+                        <a href="README.md" target="_blank">📖 README</a>
+                        <p>Complete user manual with detailed instructions for all features</p>
+                    </div>
+                    
+                    <div class="doc-item">
+                        <a href="QUICKSTART.md" target="_blank">⚡ Quick Start</a>
+                        <p>Quick reference guide with common tasks and tips</p>
+                    </div>
+                    
+                    <div class="doc-item">
+                        <a href="VISUAL_GUIDE.md" target="_blank">🎨 Visual Guide</a>
+                        <p>UI/UX overview with screenshots and descriptions</p>
+                    </div>
+                    
+                    <div class="doc-item">
+                        <a href="FILE_DOCUMENTATION.md" target="_blank">🛠️ Tech Docs</a>
+                        <p>Technical documentation for developers and customization</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Key Points -->
+            <div class="section">
+                <h2>✅ Key Highlights</h2>
+                
+                <div class="info-box">
+                    <h4>💪 Powerful & Simple</h4>
+                    <p>Easy to use interface with all features you need for library management. No complex setup required!</p>
+                </div>
+                
+                <div class="info-box">
+                    <h4>🌐 Works Offline</h4>
+                    <p>Complete offline functionality. All data stored locally in your browser. No internet required!</p>
+                </div>
+                
+                <div class="info-box">
+                    <h4>📱 Mobile Friendly</h4>
+                    <p>Fully responsive design works on desktop, tablet, and mobile devices.</p>
+                </div>
+                
+                <div class="info-box">
+                    <h4>💾 Data Safe</h4>
+                    <p>Automatic backup, manual export, and secure local storage. Your data is always protected!</p>
+                </div>
+            </div>
+            
+            <!-- Feature Checklist -->
+            <div class="section">
+                <h2>✓ Complete Feature List</h2>
+                
+                <div style="columns: 2; gap: 30px;">
+                    <div>
+                        <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px;">✓ Management</h4>
+                        <ul style="list-style: none; color: #555; font-size: 14px;">
+                            <li>✅ Student records</li>
+                            <li>✅ Seat allocation</li>
+                            <li>✅ Shift scheduling</li>
+                            <li>✅ Payment tracking</li>
+                            <li>✅ Admin login</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 15px;">✓ Reports & Data</h4>
+                        <ul style="list-style: none; color: #555; font-size: 14px;">
+                            <li>✅ Student reports</li>
+                            <li>✅ Seat utilization</li>
+                            <li>✅ Payment reports</li>
+                            <li>✅ Data export</li>
+                            <li>✅ Backup/Restore</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Requirements -->
+            <div class="section">
+                <h2>💻 System Requirements</h2>
+                
+                <div class="info-box">
+                    <h4>Minimum Requirements</h4>
+                    <p>✓ Any modern web browser (Chrome, Firefox, Safari, Edge)<br>
+                       ✓ 50MB free disk space<br>
+                       ✓ No server or installation needed<br>
+                       ✓ Works on Windows, Mac, Linux, Android, iOS</p>
+                </div>
+            </div>
+            
+            <!-- Support Section -->
+            <div class="section">
+                <h2>🤝 Need Help?</h2>
+                
+                <ol style="color: #555; font-size: 14px; line-height: 1.8;">
+                    <li><strong>Read the Quick Start Guide</strong> - QUICKSTART.md for common tasks</li>
+                    <li><strong>Check the README</strong> - README.md for detailed instructions</li>
+                    <li><strong>View Visual Guide</strong> - VISUAL_GUIDE.md for UI explanations</li>
+                    <li><strong>Browser Console</strong> - Press F12 to check for errors</li>
+                    <li><strong>Clear Cache</strong> - If data issues, clear browser cache (Ctrl+Shift+Delete)</li>
+                </ol>
+            </div>
+            
+            <!-- Call to Action -->
+            <div class="section" style="text-align: center;">
+                <h2>🎯 Ready to Get Started?</h2>
+                <p style="color: #555; margin-bottom: 20px;">Click the button below to access your library management dashboard!</p>
+                <a href="dashboard.html" class="btn btn-primary" style="font-size: 18px; padding: 20px 40px;">
+                    ➜ Launch Dashboard
+                </a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Falcon Library Management System v1.0</strong></p>
+            <p>Professional library management solution for study libraries in India</p>
+            <p style="margin-top: 10px;">📍 Works offline • 💾 Auto-save • 📱 Responsive • 🔐 Secure</p>
+        </div>
+    </div>
+</body>
+</html>
