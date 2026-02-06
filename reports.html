@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reports - Falcon Library</title>
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js"></script>
 </head>
 <body>
     <div class="container">
@@ -228,6 +233,23 @@
             printWindow.document.close();
             setTimeout(() => printWindow.print(), 250);
         }
+    </script>
+    
+    <!-- Firebase Config -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAtNUphUmqc4SuS3sekVGLHSar1q7FB0o",
+            authDomain: "falcon-library-add3e.firebaseapp.com",
+            projectId: "falcon-library-add3e",
+            storageBucket: "falcon-library-add3e.firebasestorage.app",
+            messagingSenderId: "7061237231",
+            appId: "1:7061237231:web:24337d7143b92e26125a1a",
+            measurementId: "G-N7WJ92GKDW"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
     </script>
 </body>
 </html>

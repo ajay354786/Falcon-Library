@@ -1,4 +1,119 @@
 // ===========================
+// FIRESTORE HELPERS
+// ===========================
+
+// Save data to both localStorage AND Firestore
+async function saveToFirestore(collection, data) {
+    try {
+        if (typeof db !== 'undefined') {
+            await db.collection(collection).doc(data.id || data.studentId || Date.now().toString()).set(data);
+        }
+    } catch (error) {
+        console.error('Firestore save error:', error);
+    }
+    return data;
+}
+
+// Get data from Firestore
+async function getFromFirestore(collection) {
+    try {
+        if (typeof db !== 'undefined') {
+            const snapshot = await db.collection(collection).get();
+            const data = [];
+            snapshot.forEach(doc => {
+                data.push({ id: doc.id, ...doc.data() });
+            });
+            return data;
+        }
+    } catch (error) {
+        console.error('Firestore fetch error:', error);
+    }
+    return [];
+}
+
+// Sync localStorage with Firestore
+async function syncDataToFirestore() {
+    try {
+        if (typeof db === 'undefined') return;
+        
+        // Sync students
+        const students = JSON.parse(localStorage.getItem('students')) || [];
+        for (let student of students) {
+            if (student.id) {
+                await db.collection('students').doc(student.id.toString()).set(student);
+            }
+        }
+        
+        // Sync payments
+        const payments = JSON.parse(localStorage.getItem('payments')) || [];
+        for (let payment of payments) {
+            if (payment.id) {
+                await db.collection('payments').doc(payment.id.toString()).set(payment);
+            }
+        }
+        
+        // Sync settings
+        const settings = JSON.parse(localStorage.getItem('settings')) || {};
+        if (settings) {
+            await db.collection('settings').doc('library').set(settings);
+        }
+        
+        // Sync shifts
+        const shifts = JSON.parse(localStorage.getItem('shifts')) || {};
+        if (shifts) {
+            await db.collection('shifts').doc('library').set(shifts);
+        }
+        
+        console.log('Data synced to Firestore successfully!');
+    } catch (error) {
+        console.error('Sync error:', error);
+    }
+}
+
+// Load data from Firestore to localStorage
+async function loadFromFirestore() {
+    try {
+        if (typeof db === 'undefined') return;
+        
+        // Load students
+        const studentsSnapshot = await db.collection('students').get();
+        const students = [];
+        studentsSnapshot.forEach(doc => {
+            students.push({ ...doc.data() });
+        });
+        if (students.length > 0) {
+            localStorage.setItem('students', JSON.stringify(students));
+        }
+        
+        // Load payments
+        const paymentsSnapshot = await db.collection('payments').get();
+        const payments = [];
+        paymentsSnapshot.forEach(doc => {
+            payments.push({ ...doc.data() });
+        });
+        if (payments.length > 0) {
+            localStorage.setItem('payments', JSON.stringify(payments));
+        }
+        
+        // Load settings
+        const settingsDoc = await db.collection('settings').doc('library').get();
+        if (settingsDoc.exists) {
+            localStorage.setItem('settings', JSON.stringify(settingsDoc.data()));
+        }
+        
+        // Load shifts
+        const shiftsDoc = await db.collection('shifts').doc('library').get();
+        if (shiftsDoc.exists) {
+            localStorage.setItem('shifts', JSON.stringify(shiftsDoc.data()));
+        }
+        
+        console.log('Data loaded from Firestore!');
+    } catch (error) {
+        console.error('Load error:', error);
+    }
+}
+
+// ===========================
 // AUTHENTICATION
 // ===========================
 
@@ -11,7 +126,7 @@ function handleLogin(event) {
     // Initialize default user if not exists
     let users = JSON.parse(localStorage.getItem('users'));
     if (!users) {
-        users = [{ username: 'admin', password: 'Ajay@354@786' }];
+        users = [{ username: 'admin', password: 'admin123' }];
         localStorage.setItem('users', JSON.stringify(users));
     }
 
@@ -104,7 +219,12 @@ function initializeDatabase() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    initializeDatabase();
+    // Wait a bit for Firebase to initialize
+    setTimeout(() => {
+        loadFromFirestore();
+        initializeDatabase();
+        syncDataToFirestore(); // Sync after loading
+    }, 500);
 });
 
 // ===========================
@@ -118,6 +238,9 @@ setInterval(function() {
         const settings = JSON.parse(localStorage.getItem('settings')) || {};
         settings.lastUpdate = new Date().toLocaleDateString('en-IN');
         localStorage.setItem('settings', JSON.stringify(settings));
+        
+        // Also sync to Firestore
+        syncDataToFirestore();
     }
 }, 300000); // 5 minutes
 
@@ -486,6 +609,19 @@ function isFormValid(formId) {
 // LOCAL STORAGE HELPERS
 // ===========================
 
+// Override localStorage.setItem to auto-sync to Firestore
+const originalSetItem = localStorage.setItem;
+localStorage.setItem = function(key, value) {
+    originalSetItem.call(this, key, value);
+    
+    // Sync to Firestore after a short delay
+    if (key === 'students' || key === 'payments' || key === 'settings' || key === 'shifts') {
+        setTimeout(() => {
+            syncDataToFirestore();
+        }, 1000);
+    }
+};
+
 function getStorageSize() {
     let totalSize = 0;
     for (let key in localStorage) {
@@ -510,4 +646,3 @@ function clearOldData(daysOld = 90) {
 }
 
 console.log('Falcon Library Management System - App.js loaded successfully');
-
