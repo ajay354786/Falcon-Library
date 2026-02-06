@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Demo User - Falcon Library</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .button:hover {
+            background: #5568d3;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #9f9;
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #f99;
+        }
+        .info {
+            background: #eef;
+            color: #33c;
+            border: 1px solid #99f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦅 Setup Demo User</h1>
+        <div id="status"></div>
+        <button class="button" onclick="createDemoUser()">Demo User बनाएं</button>
+        <button class="button" onclick="location.href='index.html'" style="background: #999;">Back to Login</button>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAtNUphUmqc4SuS3sekVGLHSar1q7FB0o",
+            authDomain: "falcon-library-add3e.firebaseapp.com",
+            projectId: "falcon-library-add3e",
+            storageBucket: "falcon-library-add3e.firebasestorage.app",
+            messagingSenderId: "7061237231",
+            appId: "1:7061237231:web:24337d7143b92e26125a1a",
+            measurementId: "G-N7WJ92GKDW"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function createDemoUser() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="status info">⏳ Processing...</div>';
+            
+            try {
+                // Check if demo user already exists
+                const existingUser = await db.collection('users').where('email', '==', 'student@falcon.com').get();
+                
+                if (!existingUser.empty) {
+                    statusDiv.innerHTML = '<div class="status info">ℹ️ Demo user पहले से exist करता है!</div>';
+                    return;
+                }
+
+                // Create demo user
+                const demoUser = {
+                    email: "student@falcon.com",
+                    password: "student123",
+                    fullName: "Demo Student",
+                    role: "student",
+                    createdAt: new Date().toISOString(),
+                    lastLogin: null,
+                    studentData: {
+                        mobile: '9876543210',
+                        joiningDate: new Date().toISOString().split('T')[0],
+                        seatNumber: '',
+                        shift: '',
+                        status: 'Active'
+                    }
+                };
+
+                const userRef = await db.collection('users').add(demoUser);
+                
+                statusDiv.innerHTML = `
+                    <div class="status success">
+                        <h2>✓ Demo User Created!</h2>
+                        <p><strong>Email:</strong> student@falcon.com</p>
+                        <p><strong>Password:</strong> student123</p>
+                    </div>
+                `;
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', function() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="status info">ℹ️ Click button to create demo user...</div>';
+        });
+    </script>
+</body>
+</html>

@@ -113,63 +113,224 @@ async function loadFromFirestore() {
     }
 }
 
+// Display current user in navbar
+function displayCurrentUser() {
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+        const userDisplay = document.getElementById('userDisplay');
+        if (userDisplay) {
+            userDisplay.textContent = `👤 ${currentUser.fullName}`;
+        }
+    }
+}
+
 // ===========================
-// AUTHENTICATION
+// AUTHENTICATION - SIGN UP & SIGN IN
 // ===========================
 
-function handleLogin(event) {
+// SIGN UP Function
+async function handleSignUp(event) {
     event.preventDefault();
 
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const confirmPassword = document.getElementById('signupConfirmPassword').value;
+    const fullName = document.getElementById('signupName').value.trim();
 
-    // Initialize default user if not exists
-    let users = JSON.parse(localStorage.getItem('users'));
-    if (!users) {
-        users = [{ username: 'admin', password: 'admin123' }];
-        localStorage.setItem('users', JSON.stringify(users));
+    // Validation
+    if (!email || !password || !confirmPassword || !fullName) {
+        showNotification('सभी fields भरें!', 'error');
+        return;
     }
 
-    // Check credentials
-    const user = users.find(u => u.username === username && u.password === password);
+    if (password !== confirmPassword) {
+        showNotification('Passwords match नहीं कर रहे हैं!', 'error');
+        return;
+    }
 
-    if (user) {
-        // Set session
-        localStorage.setItem('loggedInUser', JSON.stringify(user));
-        localStorage.setItem('sessionTime', new Date().getTime());
+    if (password.length < 6) {
+        showNotification('Password कम से कम 6 characters होना चाहिए!', 'error');
+        return;
+    }
+
+    if (!validateEmail(email)) {
+        showNotification('Invalid email address!', 'error');
+        return;
+    }
+
+    try {
+        // Check if email already exists
+        const existingUser = await db.collection('users').where('email', '==', email).get();
+        if (!existingUser.empty) {
+            showNotification('यह email पहले से registered है!', 'error');
+            return;
+        }
+
+        // Create new user in Firestore
+        const newUser = {
+            email: email,
+            password: password, // ⚠️ In production, use Firebase Auth
+            fullName: fullName,
+            role: 'student', // student or admin
+            createdAt: new Date().toISOString(),
+            lastLogin: null,
+            studentData: {
+                mobile: '',
+                joiningDate: '',
+                seatNumber: '',
+                shift: '',
+                status: 'Inactive'
+            }
+        };
+
+        const userRef = await db.collection('users').add(newUser);
         
-        // Redirect to dashboard
-        window.location.href = 'dashboard.html';
-    } else {
-        // Show error
-        const errorDiv = document.getElementById('loginError');
-        errorDiv.textContent = 'Invalid username or password!';
-        errorDiv.style.display = 'block';
+        // Store user ID in localStorage for quick access
+        localStorage.setItem('userId', userRef.id);
+        localStorage.setItem('currentUser', JSON.stringify({
+            id: userRef.id,
+            email: email,
+            fullName: fullName,
+            role: 'student'
+        }));
+
+        showNotification('खाता सफलतापूर्वक बनाया गया! डैशबोर्ड पर जा रहे हैं...', 'success');
         
-        // Clear password field
-        document.getElementById('password').value = '';
-        
-        // Hide error after 5 seconds
         setTimeout(() => {
-            errorDiv.style.display = 'none';
-        }, 5000);
+            window.location.href = 'dashboard.html';
+        }, 1500);
+
+    } catch (error) {
+        console.error('Signup error:', error);
+        showNotification('Signup में error: ' + error.message, 'error');
     }
 }
 
+// SIGN IN Function
+async function handleSignIn(event) {
+    event.preventDefault();
+
+    const email = document.getElementById('signinEmail').value.trim();
+    const password = document.getElementById('signinPassword').value;
+
+    if (!email || !password) {
+        showNotification('Email और Password दोनों दर्ज करें!', 'error');
+        return;
+    }
+
+    try {
+        // Find user in Firestore
+        const userSnapshot = await db.collection('users').where('email', '==', email).get();
+        
+        if (userSnapshot.empty) {
+            showNotification('यह email registered नहीं है!', 'error');
+            return;
+        }
+
+        const userDoc = userSnapshot.docs[0];
+        const userData = userDoc.data();
+
+        // Check password
+        if (userData.password !== password) {
+            showNotification('गलत पासवर्ड!', 'error');
+            return;
+        }
+
+        // Update last login
+        await db.collection('users').doc(userDoc.id).update({
+            lastLogin: new Date().toISOString()
+        });
+
+        // Store in localStorage
+        localStorage.setItem('userId', userDoc.id);
+        localStorage.setItem('currentUser', JSON.stringify({
+            id: userDoc.id,
+            email: userData.email,
+            fullName: userData.fullName,
+            role: userData.role
+        }));
+        localStorage.setItem('sessionTime', new Date().getTime());
+
+        showNotification('स्वागत है, ' + userData.fullName + '!', 'success');
+        
+        setTimeout(() => {
+            window.location.href = 'dashboard.html';
+        }, 1000);
+
+    } catch (error) {
+        console.error('Signin error:', error);
+        showNotification('Login में error: ' + error.message, 'error');
+    }
+}
+
+// Check if user is logged in
 function checkAuth() {
-    const loggedInUser = localStorage.getItem('loggedInUser');
+    const userId = localStorage.getItem('userId');
+    const currentUser = localStorage.getItem('currentUser');
     
-    if (!loggedInUser) {
-        // Redirect to login if not authenticated
+    if (!userId || !currentUser) {
         window.location.href = 'index.html';
     }
 }
 
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        localStorage.removeItem('loggedInUser');
-        localStorage.removeItem('sessionTime');
-        window.location.href = 'index.html';
+// Logout Function
+async function logout() {
+    if (confirm('क्या आप सचमुच logout करना चाहते हैं?')) {
+        try {
+            // Clear localStorage
+            localStorage.removeItem('userId');
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('sessionTime');
+            localStorage.removeItem('loggedInUser');
+            
+            // Optionally: Clear cached data
+            // localStorage.removeItem('students');
+            // localStorage.removeItem('payments');
+            
+            window.location.href = 'index.html';
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    }
+}
+
+// Get current logged-in user
+function getCurrentUser() {
+    const userStr = localStorage.getItem('currentUser');
+    return userStr ? JSON.parse(userStr) : null;
+}
+
+// Get current user's data from Firestore
+async function getCurrentUserData() {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return null;
+    
+    try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        return userDoc.data();
+    } catch (error) {
+        console.error('Error fetching user data:', error);
+        return null;
+    }
+}
+
+// Update user profile
+async function updateUserProfile(updates) {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return false;
+
+    try {
+        await db.collection('users').doc(userId).update(updates);
+        
+        // Update localStorage
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        Object.assign(currentUser, updates);
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        return true;
+    } catch (error) {
+        console.error('Profile update error:', error);
+        return false;
     }
 }
 
@@ -178,12 +339,16 @@ function logout() {
 // ===========================
 
 function initializeDatabase() {
+    // Get current logged-in user
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+
     // Initialize default settings if not exists
     if (!localStorage.getItem('settings')) {
         const settings = {
             totalSeats: 50,
             monthlyFee: 1500,
-            libraryRules: 'Welcome to Falcon Library!\n\n1. Please maintain silence in the library.\n2. Keep your seat clean.\n3. No food or drinks allowed.\n4. Return borrowed materials on time.\n5. Respect fellow students.',
+            libraryRules: 'Welcome to Falcon Library!\n\n1. कृपया लाइब्रेरी में चुप् रहें।\n2. अपनी seat को साफ रखें।\n3. खाना-पीना अनुमत नहीं है।\n4. उधार दी गई किताबें समय पर वापस करें।\n5. अन्य छात्रों का सम्मान करें।',
             lastUpdate: new Date().toLocaleDateString('en-IN')
         };
         localStorage.setItem('settings', JSON.stringify(settings));
@@ -211,19 +376,22 @@ function initializeDatabase() {
     if (!localStorage.getItem('seats')) {
         localStorage.setItem('seats', JSON.stringify([]));
     }
-
-    if (!localStorage.getItem('users')) {
-        localStorage.setItem('users', JSON.stringify([{ username: 'admin', password: 'admin123' }]));
-    }
 }
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Wait a bit for Firebase to initialize
     setTimeout(() => {
-        loadFromFirestore();
-        initializeDatabase();
-        syncDataToFirestore(); // Sync after loading
+        const userId = localStorage.getItem('userId');
+        if (userId) {
+            // User is logged in
+            loadFromFirestore();
+            initializeDatabase();
+            syncDataToFirestore(); // Sync after loading
+        } else {
+            // No user logged in, just load defaults
+            initializeDatabase();
+        }
     }, 500);
 });
 
@@ -614,8 +782,9 @@ const originalSetItem = localStorage.setItem;
 localStorage.setItem = function(key, value) {
     originalSetItem.call(this, key, value);
     
-    // Sync to Firestore after a short delay
-    if (key === 'students' || key === 'payments' || key === 'settings' || key === 'shifts') {
+    // Sync to Firestore after a short delay (but only if user is logged in)
+    const userId = localStorage.getItem('userId');
+    if (userId && (key === 'students' || key === 'payments' || key === 'settings' || key === 'shifts')) {
         setTimeout(() => {
             syncDataToFirestore();
         }, 1000);
