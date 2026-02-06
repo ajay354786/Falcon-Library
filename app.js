@@ -11,7 +11,7 @@ function handleLogin(event) {
     // Initialize default user if not exists
     let users = JSON.parse(localStorage.getItem('users'));
     if (!users) {
-        users = [{ username: 'admin', password: 'admin123' }];
+        users = [{ username: 'admin', password: 'Ajay@354@786' }];
         localStorage.setItem('users', JSON.stringify(users));
     }
 
@@ -510,3 +510,4 @@ function clearOldData(daysOld = 90) {
 }
 
 console.log('Falcon Library Management System - App.js loaded successfully');
+
