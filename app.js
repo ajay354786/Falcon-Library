@@ -1,12 +1,108 @@
 // ===========================
-// FIRESTORE HELPERS
+// FIRESTORE HELPERS - REAL TIME SYNC
 // ===========================
 
-// Save data to both localStorage AND Firestore
+// Store real-time listeners to manage them
+const firestoreListeners = {};
+
+// Initialize real-time listeners for live sync across devices
+async function initializeRealtimeListeners() {
+    if (typeof db === 'undefined') return;
+    
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+
+    try {
+        // Listen to students collection
+        firestoreListeners.students = db.collection('students').onSnapshot(snapshot => {
+            const localStudents = JSON.parse(localStorage.getItem('students')) || [];
+            const firestoreStudents = [];
+            
+            snapshot.forEach(doc => {
+                firestoreStudents.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // Check if data is different before updating
+            if (JSON.stringify(localStudents) !== JSON.stringify(firestoreStudents)) {
+                localStorage.setItem('students', JSON.stringify(firestoreStudents));
+                console.log('📱 Real-time students update:', firestoreStudents.length);
+                // Refresh UI if function exists
+                if (typeof refreshStudentsList === 'function') {
+                    refreshStudentsList();
+                }
+            }
+        });
+
+        // Listen to payments collection
+        firestoreListeners.payments = db.collection('payments').onSnapshot(snapshot => {
+            const localPayments = JSON.parse(localStorage.getItem('payments')) || [];
+            const firestorePayments = [];
+            
+            snapshot.forEach(doc => {
+                firestorePayments.push({ id: doc.id, ...doc.data() });
+            });
+            
+            if (JSON.stringify(localPayments) !== JSON.stringify(firestorePayments)) {
+                localStorage.setItem('payments', JSON.stringify(firestorePayments));
+                console.log('📱 Real-time payments update:', firestorePayments.length);
+                if (typeof refreshPaymentsList === 'function') {
+                    refreshPaymentsList();
+                }
+            }
+        });
+
+        // Listen to settings document
+        firestoreListeners.settings = db.collection('settings').doc('library').onSnapshot(doc => {
+            if (doc.exists) {
+                const localSettings = JSON.parse(localStorage.getItem('settings')) || {};
+                const firestoreSettings = doc.data();
+                
+                if (JSON.stringify(localSettings) !== JSON.stringify(firestoreSettings)) {
+                    localStorage.setItem('settings', JSON.stringify(firestoreSettings));
+                    console.log('📱 Real-time settings update');
+                    if (typeof refreshSettings === 'function') {
+                        refreshSettings();
+                    }
+                }
+            }
+        });
+
+        // Listen to shifts document
+        firestoreListeners.shifts = db.collection('shifts').doc('library').onSnapshot(doc => {
+            if (doc.exists) {
+                const localShifts = JSON.parse(localStorage.getItem('shifts')) || {};
+                const firestoreShifts = doc.data();
+                
+                if (JSON.stringify(localShifts) !== JSON.stringify(firestoreShifts)) {
+                    localStorage.setItem('shifts', JSON.stringify(firestoreShifts));
+                    console.log('📱 Real-time shifts update');
+                }
+            }
+        });
+
+        console.log('✅ Real-time listeners initialized successfully!');
+    } catch (error) {
+        console.error('Error initializing real-time listeners:', error);
+    }
+}
+
+// Stop all real-time listeners
+function stopRealtimeListeners() {
+    Object.values(firestoreListeners).forEach(listener => {
+        if (listener && typeof listener === 'function') {
+            listener();
+        }
+    });
+    console.log('Real-time listeners stopped');
+}
+
+// Save data to both localStorage AND Firestore with immediate sync
 async function saveToFirestore(collection, data) {
     try {
         if (typeof db !== 'undefined') {
-            await db.collection(collection).doc(data.id || data.studentId || Date.now().toString()).set(data);
+            const docId = data.id || data.studentId || Date.now().toString();
+            await db.collection(collection).doc(docId).set(data, { merge: true });
+            console.log(`✅ Saved to Firestore: ${collection}/${docId}`);
         }
     } catch (error) {
         console.error('Firestore save error:', error);
@@ -31,6 +127,18 @@ async function getFromFirestore(collection) {
     return [];
 }
 
+// Delete data from Firestore
+async function deleteFromFirestore(collection, docId) {
+    try {
+        if (typeof db !== 'undefined') {
+            await db.collection(collection).doc(docId).delete();
+            console.log(`✅ Deleted from Firestore: ${collection}/${docId}`);
+        }
+    } catch (error) {
+        console.error('Firestore delete error:', error);
+    }
+}
+
 // Sync localStorage with Firestore
 async function syncDataToFirestore() {
     try {
@@ -40,7 +148,7 @@ async function syncDataToFirestore() {
         const students = JSON.parse(localStorage.getItem('students')) || [];
         for (let student of students) {
             if (student.id) {
-                await db.collection('students').doc(student.id.toString()).set(student);
+                await db.collection('students').doc(student.id.toString()).set(student, { merge: true });
             }
         }
         
@@ -48,23 +156,23 @@ async function syncDataToFirestore() {
         const payments = JSON.parse(localStorage.getItem('payments')) || [];
         for (let payment of payments) {
             if (payment.id) {
-                await db.collection('payments').doc(payment.id.toString()).set(payment);
+                await db.collection('payments').doc(payment.id.toString()).set(payment, { merge: true });
             }
         }
         
         // Sync settings
         const settings = JSON.parse(localStorage.getItem('settings')) || {};
-        if (settings) {
-            await db.collection('settings').doc('library').set(settings);
+        if (settings && Object.keys(settings).length > 0) {
+            await db.collection('settings').doc('library').set(settings, { merge: true });
         }
         
         // Sync shifts
         const shifts = JSON.parse(localStorage.getItem('shifts')) || {};
-        if (shifts) {
-            await db.collection('shifts').doc('library').set(shifts);
+        if (shifts && Object.keys(shifts).length > 0) {
+            await db.collection('shifts').doc('library').set(shifts, { merge: true });
         }
         
-        console.log('Data synced to Firestore successfully!');
+        console.log('✅ Data synced to Firestore successfully!');
     } catch (error) {
         console.error('Sync error:', error);
     }
@@ -277,6 +385,9 @@ function checkAuth() {
 async function logout() {
     if (confirm('क्या आप सचमुच logout करना चाहते हैं?')) {
         try {
+            // Stop real-time listeners before logging out
+            stopRealtimeListeners();
+            
             // Clear localStorage
             localStorage.removeItem('userId');
             localStorage.removeItem('currentUser');
@@ -388,6 +499,11 @@ document.addEventListener('DOMContentLoaded', function() {
             loadFromFirestore();
             initializeDatabase();
             syncDataToFirestore(); // Sync after loading
+            
+            // Initialize real-time listeners for live sync across devices
+            setTimeout(() => {
+                initializeRealtimeListeners();
+            }, 1000);
         } else {
             // No user logged in, just load defaults
             initializeDatabase();
@@ -573,8 +689,150 @@ function filterByStatus(array, status) {
 }
 
 // ===========================
-// BATCH OPERATIONS
+// CRUD OPERATIONS WITH FIRESTORE SYNC
 // ===========================
+
+// Add a new student and sync to Firestore
+async function addStudent(studentData) {
+    try {
+        const students = JSON.parse(localStorage.getItem('students')) || [];
+        
+        // Generate ID if not exists
+        if (!studentData.id) {
+            studentData.id = 'STU_' + Date.now();
+        }
+        
+        students.push(studentData);
+        localStorage.setItem('students', JSON.stringify(students));
+        
+        // Save to Firestore
+        await saveToFirestore('students', studentData);
+        
+        showNotification('✅ Student added successfully!', 'success');
+        return true;
+    } catch (error) {
+        console.error('Error adding student:', error);
+        showNotification('❌ Error adding student: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// Update an existing student and sync to Firestore
+async function updateStudent(studentId, updates) {
+    try {
+        const students = JSON.parse(localStorage.getItem('students')) || [];
+        const student = students.find(s => s.id === studentId);
+        
+        if (!student) {
+            showNotification('❌ Student not found!', 'error');
+            return false;
+        }
+        
+        // Update student data
+        Object.assign(student, updates);
+        localStorage.setItem('students', JSON.stringify(students));
+        
+        // Save to Firestore
+        await saveToFirestore('students', student);
+        
+        showNotification('✅ Student updated successfully!', 'success');
+        return true;
+    } catch (error) {
+        console.error('Error updating student:', error);
+        showNotification('❌ Error updating student: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// Delete a student and sync to Firestore
+async function deleteStudent(studentId) {
+    try {
+        const students = JSON.parse(localStorage.getItem('students')) || [];
+        const filteredStudents = students.filter(s => s.id !== studentId);
+        localStorage.setItem('students', JSON.stringify(filteredStudents));
+        
+        // Delete from Firestore
+        await deleteFromFirestore('students', studentId.toString());
+        
+        showNotification('✅ Student deleted successfully!', 'success');
+        return true;
+    } catch (error) {
+        console.error('Error deleting student:', error);
+        showNotification('❌ Error deleting student: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// Add a new payment and sync to Firestore
+async function addPayment(paymentData) {
+    try {
+        const payments = JSON.parse(localStorage.getItem('payments')) || [];
+        
+        // Generate ID if not exists
+        if (!paymentData.id) {
+            paymentData.id = 'PAY_' + Date.now();
+        }
+        
+        payments.push(paymentData);
+        localStorage.setItem('payments', JSON.stringify(payments));
+        
+        // Save to Firestore
+        await saveToFirestore('payments', paymentData);
+        
+        showNotification('✅ Payment added successfully!', 'success');
+        return true;
+    } catch (error) {
+        console.error('Error adding payment:', error);
+        showNotification('❌ Error adding payment: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// Update an existing payment and sync to Firestore
+async function updatePayment(paymentId, updates) {
+    try {
+        const payments = JSON.parse(localStorage.getItem('payments')) || [];
+        const payment = payments.find(p => p.id === paymentId);
+        
+        if (!payment) {
+            showNotification('❌ Payment not found!', 'error');
+            return false;
+        }
+        
+        // Update payment data
+        Object.assign(payment, updates);
+        localStorage.setItem('payments', JSON.stringify(payments));
+        
+        // Save to Firestore
+        await saveToFirestore('payments', payment);
+        
+        showNotification('✅ Payment updated successfully!', 'success');
+        return true;
+    } catch (error) {
+        console.error('Error updating payment:', error);
+        showNotification('❌ Error updating payment: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// Delete a payment and sync to Firestore
+async function deletePayment(paymentId) {
+    try {
+        const payments = JSON.parse(localStorage.getItem('payments')) || [];
+        const filteredPayments = payments.filter(p => p.id !== paymentId);
+        localStorage.setItem('payments', JSON.stringify(filteredPayments));
+        
+        // Delete from Firestore
+        await deleteFromFirestore('payments', paymentId.toString());
+        
+        showNotification('✅ Payment deleted successfully!', 'success');
+        return true;
+    } catch (error) {
+        console.error('Error deleting payment:', error);
+        showNotification('❌ Error deleting payment: ' + error.message, 'error');
+        return false;
+    }
+}
 
 function updateStudentStatus(studentId, newStatus) {
     const students = JSON.parse(localStorage.getItem('students')) || [];
@@ -777,17 +1035,15 @@ function isFormValid(formId) {
 // LOCAL STORAGE HELPERS
 // ===========================
 
-// Override localStorage.setItem to auto-sync to Firestore
+// Override localStorage.setItem to auto-sync to Firestore immediately
 const originalSetItem = localStorage.setItem;
 localStorage.setItem = function(key, value) {
     originalSetItem.call(this, key, value);
     
-    // Sync to Firestore after a short delay (but only if user is logged in)
+    // Sync to Firestore IMMEDIATELY (no delay for real-time experience)
     const userId = localStorage.getItem('userId');
     if (userId && (key === 'students' || key === 'payments' || key === 'settings' || key === 'shifts')) {
-        setTimeout(() => {
-            syncDataToFirestore();
-        }, 1000);
+        syncDataToFirestore();
     }
 };
 
