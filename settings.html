@@ -189,17 +189,23 @@
             document.getElementById('libraryRules').value = settings.libraryRules || '';
         }
 
-        function saveBasicSettings() {
+        async function saveBasicSettings() {
             const settings = JSON.parse(localStorage.getItem('settings')) || {};
             
             settings.totalSeats = parseInt(document.getElementById('totalSeats').value);
             settings.monthlyFee = parseFloat(document.getElementById('monthlyFee').value);
             
             localStorage.setItem('settings', JSON.stringify(settings));
-            alert('Settings saved successfully!');
+            
+            // Sync to Firestore
+            if (typeof db !== 'undefined') {
+                await db.collection('settings').doc('library').set(settings, { merge: true });
+            }
+            
+            showNotification('✅ Settings saved successfully!', 'success');
         }
 
-        function saveShiftSettings() {
+        async function saveShiftSettings() {
             const shifts = {
                 morning: {
                     start: document.getElementById('morningStart').value,
@@ -216,15 +222,27 @@
             };
             
             localStorage.setItem('shifts', JSON.stringify(shifts));
-            alert('Shift timings saved successfully!');
+            
+            // Sync to Firestore
+            if (typeof db !== 'undefined') {
+                await db.collection('shifts').doc('library').set(shifts, { merge: true });
+            }
+            
+            showNotification('✅ Shift timings saved successfully!', 'success');
         }
 
-        function saveLibraryRules() {
+        async function saveLibraryRules() {
             const settings = JSON.parse(localStorage.getItem('settings')) || {};
             settings.libraryRules = document.getElementById('libraryRules').value;
             
             localStorage.setItem('settings', JSON.stringify(settings));
-            alert('Library rules saved successfully!');
+            
+            // Sync to Firestore
+            if (typeof db !== 'undefined') {
+                await db.collection('settings').doc('library').set(settings, { merge: true });
+            }
+            
+            showNotification('✅ Library rules saved successfully!', 'success');
         }
 
         function changeAdminPassword() {

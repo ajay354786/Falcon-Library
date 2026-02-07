@@ -124,7 +124,16 @@
             checkAuth();
             displayCurrentUser();
             updateDashboard();
+            // Initialize real-time listeners
+            setTimeout(() => {
+                initializeRealtimeListeners();
+            }, 1000);
         });
+
+        // Refresh dashboard when settings/students/payments change (called by real-time listeners)
+        function refreshSettings() {
+            updateDashboard();
+        }
 
         function updateDashboard() {
             const settings = JSON.parse(localStorage.getItem('settings')) || {};

@@ -182,6 +182,12 @@
             });
         }
 
+        // Refresh payments list (called by real-time listeners)
+        function refreshPaymentsList() {
+            loadPayments();
+            filterPayments();
+        }
+
         function formatMonth(monthStr) {
             const [year, month] = monthStr.split('-');
             const date = new Date(year, month - 1);
@@ -277,14 +283,13 @@
             }
         }
 
-        function savePayment(event) {
+        async function savePayment(event) {
             event.preventDefault();
             
-            const payments = JSON.parse(localStorage.getItem('payments')) || [];
             const id = document.getElementById('paymentId').value;
             
             const paymentData = {
-                id: id ? parseInt(id) : Date.now(),
+                id: id ? parseInt(id) : 'PAY_' + Date.now(),
                 studentId: parseInt(document.getElementById('paymentStudent').value),
                 month: document.getElementById('paymentMonth').value,
                 amount: document.getElementById('paymentAmount').value,
@@ -293,27 +298,34 @@
                 dueDate: document.getElementById('paymentDueDate').value
             };
 
-            const existingIndex = payments.findIndex(p => p.id === paymentData.id);
-            
-            if (existingIndex > -1) {
-                payments[existingIndex] = paymentData;
+            if (id) {
+                // Edit existing payment
+                await updatePayment(id, paymentData);
             } else {
-                payments.push(paymentData);
+                // Add new payment
+                await addPayment(paymentData);
             }
             
-            localStorage.setItem('payments', JSON.stringify(payments));
             closePaymentModal();
-            loadPayments();
-            alert('Payment saved successfully!');
+            // Wait a moment for Firestore to update
+            setTimeout(() => {
+                loadPayments();
+            }, 500);
         }
 
-        function deletePayment(id) {
+        async function deletePayment(id) {
             if (confirm('Are you sure you want to delete this payment record?')) {
                 const payments = JSON.parse(localStorage.getItem('payments')) || [];
                 const filtered = payments.filter(p => p.id !== id);
                 localStorage.setItem('payments', JSON.stringify(filtered));
-                loadPayments();
-                alert('Payment record deleted successfully!');
+                
+                // Delete from Firestore via global function
+                await deleteFromFirestore('payments', id.toString());
+                
+                // Wait a moment for Firestore to update
+                setTimeout(() => {
+                    loadPayments();
+                }, 500);
             }
         }
 

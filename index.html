@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Falcon Library - Login</title>
-    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>🦅</text></svg>">
     
     <!-- Firebase SDK (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -98,6 +100,7 @@
             font-family: Arial, sans-serif;
             box-sizing: border-box;
             transition: border-color 0.3s;
+            color: #333;
         }
 
         .form-group input:focus,
@@ -118,10 +121,13 @@
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
         }
 
         .btn-submit:hover {
             transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
         }
 
         .error-message {
@@ -174,8 +180,8 @@
             <p class="subtitle">Library Management System</p>
             
             <div class="tabs">
-                <button class="tab-button active" onclick="switchTab('signin')">Sign In</button>
-                <button class="tab-button" onclick="switchTab('signup')">Sign Up</button>
+                <button class="tab-button active" onclick="switchTab(event, 'signin')">Sign In</button>
+                <button class="tab-button" onclick="switchTab(event, 'signup')">Sign Up</button>
             </div>
 
             <!-- SIGN IN TAB -->
@@ -255,7 +261,9 @@
     </script>
     
     <script>
-        function switchTab(tabName) {
+        function switchTab(event, tabName) {
+            event.preventDefault();
+            
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');

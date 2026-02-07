@@ -259,6 +259,12 @@
             });
         }
 
+        // Refresh students list (called by real-time listeners)
+        function refreshStudentsList() {
+            loadStudents();
+            filterStudents();
+        }
+
         function loadSeats() {
             const students = JSON.parse(localStorage.getItem('students')) || [];
             const seatSelect = document.getElementById('studentSeat');
@@ -389,28 +395,37 @@
             }
         }
 
-        function saveStudentData(students, studentData) {
+        async function saveStudentData(students, studentData) {
             const existingIndex = students.findIndex(s => s.id === studentData.id);
             
             if (existingIndex > -1) {
-                students[existingIndex] = studentData;
+                // Update existing student
+                await updateStudent(studentData.id, studentData);
             } else {
-                students.push(studentData);
+                // Add new student
+                await addStudent(studentData);
             }
             
-            localStorage.setItem('students', JSON.stringify(students));
             closeStudentModal();
-            loadStudents();
-            alert('Student saved successfully!');
+            // Wait a moment for Firestore to update
+            setTimeout(() => {
+                loadStudents();
+            }, 500);
         }
 
-        function deleteStudent(id) {
+        async function deleteStudent(id) {
             if (confirm('Are you sure you want to delete this student?')) {
                 const students = JSON.parse(localStorage.getItem('students')) || [];
-                const filtered = students.filter(s => s.id !== id);
-                localStorage.setItem('students', JSON.stringify(filtered));
-                loadStudents();
-                alert('Student deleted successfully!');
+                const filteredStudents = students.filter(s => s.id !== id);
+                localStorage.setItem('students', JSON.stringify(filteredStudents));
+                
+                // Delete from Firestore via global function
+                await deleteFromFirestore('students', id.toString());
+                
+                // Wait a moment for Firestore to update
+                setTimeout(() => {
+                    loadStudents();
+                }, 500);
             }
         }
 
@@ -467,6 +482,13 @@
             }
         }
 
+        // Refresh payments list (called by real-time listeners)
+        function refreshPaymentsList() {
+            if (currentStudentId) {
+                loadPaymentLedger(currentStudentId);
+            }
+        }
+
         function openAddPaymentModal() {
             if (!currentStudentId) {
                 alert('Please select a student first!');
@@ -511,15 +533,14 @@
             document.getElementById('paymentModal').style.display = 'none';
         }
 
-        function savePayment(event) {
+        async function savePayment(event) {
             event.preventDefault();
             
-            const payments = JSON.parse(localStorage.getItem('payments')) || [];
             const paymentId = document.getElementById('paymentId').value;
             const studentId = parseInt(document.getElementById('paymentStudentId').value);
             
             const paymentData = {
-                id: paymentId ? parseInt(paymentId) : Date.now(),
+                id: paymentId ? parseInt(paymentId) : 'PAY_' + Date.now(),
                 studentId: studentId,
                 amount: parseFloat(document.getElementById('paymentAmount').value),
                 status: document.getElementById('paymentStatus').value,
@@ -530,28 +551,32 @@
 
             if (paymentId) {
                 // Edit existing payment
-                const index = payments.findIndex(p => p.id === parseInt(paymentId));
-                if (index > -1) {
-                    payments[index] = paymentData;
-                }
+                await updatePayment(paymentId, paymentData);
             } else {
                 // Add new payment
-                payments.push(paymentData);
+                await addPayment(paymentData);
             }
 
-            localStorage.setItem('payments', JSON.stringify(payments));
             closePaymentModal();
-            loadPaymentLedger(studentId);
-            alert('Payment saved successfully!');
+            // Wait a moment for Firestore to update
+            setTimeout(() => {
+                loadPaymentLedger(studentId);
+            }, 500);
         }
 
-        function deletePayment(paymentId) {
+        async function deletePayment(paymentId) {
             if (confirm('Are you sure you want to delete this payment?')) {
                 const payments = JSON.parse(localStorage.getItem('payments')) || [];
                 const filteredPayments = payments.filter(p => p.id !== paymentId);
                 localStorage.setItem('payments', JSON.stringify(filteredPayments));
-                loadPaymentLedger(currentStudentId);
-                alert('Payment deleted successfully!');
+                
+                // Delete from Firestore via global function
+                await deleteFromFirestore('payments', paymentId.toString());
+                
+                // Wait a moment for Firestore to update
+                setTimeout(() => {
+                    loadPaymentLedger(currentStudentId);
+                }, 500);
             }
         }
 

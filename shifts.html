@@ -97,7 +97,16 @@
             checkAuth();
             loadShiftTimings();
             showShiftStudents('Morning');
+            // Initialize real-time listeners
+            setTimeout(() => {
+                initializeRealtimeListeners();
+            }, 1000);
         });
+
+        // Refresh student list when students change
+        function refreshStudentsList() {
+            showShiftStudents(currentShift);
+        }
 
         function loadShiftTimings() {
             const shifts = JSON.parse(localStorage.getItem('shifts')) || {};
@@ -110,7 +119,7 @@
             document.getElementById('fullDayEnd').value = shifts.fullDay?.end || '20:00';
         }
 
-        function saveShiftTimings() {
+        async function saveShiftTimings() {
             const shifts = {
                 morning: {
                     start: document.getElementById('morningStart').value,
@@ -127,7 +136,13 @@
             };
             
             localStorage.setItem('shifts', JSON.stringify(shifts));
-            alert('Shift timings saved successfully!');
+            
+            // Sync to Firestore
+            if (typeof db !== 'undefined') {
+                await db.collection('shifts').doc('library').set(shifts, { merge: true });
+            }
+            
+            showNotification('✅ Shift timings saved successfully!', 'success');
         }
 
         function showShiftStudents(shift) {

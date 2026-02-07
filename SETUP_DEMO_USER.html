@@ -63,10 +63,13 @@
 </head>
 <body>
     <div class="container">
-        <h1>🦅 Setup Demo User</h1>
+        <h1>🦅 Setup Demo User & Data</h1>
         <div id="status"></div>
-        <button class="button" onclick="createDemoUser()">Demo User बनाएं</button>
+        <button class="button" onclick="setupDemoData()">Complete Setup शुरू करें</button>
         <button class="button" onclick="location.href='index.html'" style="background: #999;">Back to Login</button>
+        <div id="progress" style="display:none; margin-top: 20px;">
+            <div id="steps"></div>
+        </div>
     </div>
 
     <script>
@@ -83,54 +86,181 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        async function createDemoUser() {
+        function updateStatus(message, type = 'info') {
             const statusDiv = document.getElementById('status');
-            statusDiv.innerHTML = '<div class="status info">⏳ Processing...</div>';
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function addStep(stepName, status) {
+            const stepsDiv = document.getElementById('steps');
+            const stepEl = document.createElement('div');
+            stepEl.innerHTML = `<div style="padding: 8px; margin: 5px 0;">${stepName}: <strong>${status}</strong></div>`;
+            stepsDiv.appendChild(stepEl);
+            console.log(`${stepName}: ${status}`);
+        }
+
+        async function setupDemoData() {
+            const statusDiv = document.getElementById('status');
+            const progressDiv = document.getElementById('progress');
+            const stepsDiv = document.getElementById('steps');
+            
+            statusDiv.innerHTML = '<div class="status info">⏳ सेटअप शुरू हो रहा है...</div>';
+            progressDiv.style.display = 'block';
+            stepsDiv.innerHTML = '';
             
             try {
-                // Check if demo user already exists
+                // Step 1: Create demo user
+                addStep('Demo User बनाना', '⏳ Processing...');
                 const existingUser = await db.collection('users').where('email', '==', 'student@falcon.com').get();
                 
-                if (!existingUser.empty) {
-                    statusDiv.innerHTML = '<div class="status info">ℹ️ Demo user पहले से exist करता है!</div>';
-                    return;
+                if (existingUser.empty) {
+                    const demoUser = {
+                        email: "student@falcon.com",
+                        password: "student123",
+                        fullName: "Demo Student",
+                        role: "student",
+                        createdAt: new Date().toISOString(),
+                        lastLogin: null,
+                        studentData: {
+                            mobile: '9876543210',
+                            joiningDate: '2026-01-01',
+                            seatNumber: '',
+                            shift: '',
+                            status: 'Active'
+                        }
+                    };
+                    await db.collection('users').add(demoUser);
+                    addStep('Demo User बनाना', '✓ Done');
+                } else {
+                    addStep('Demo User बनाना', '⚠️ Already Exists');
                 }
 
-                // Create demo user
-                const demoUser = {
-                    email: "student@falcon.com",
-                    password: "student123",
-                    fullName: "Demo Student",
-                    role: "student",
-                    createdAt: new Date().toISOString(),
-                    lastLogin: null,
-                    studentData: {
-                        mobile: '9876543210',
-                        joiningDate: new Date().toISOString().split('T')[0],
-                        seatNumber: '',
-                        shift: '',
-                        status: 'Active'
-                    }
+                // Step 2: Create settings
+                addStep('Settings बनाना', '⏳ Processing...');
+                const settings = {
+                    totalSeats: 50,
+                    monthlyFee: 1500,
+                    libraryRules: 'Welcome to Falcon Library!\n\n1. कृपया लाइब्रेरी में चुप् रहें।\n2. अपनी seat को साफ रखें।\n3. खाना-पीना अनुमत नहीं है।\n4. उधार दी गई किताबें समय पर वापस करें।\n5. अन्य छात्रों का सम्मान करें।',
+                    lastUpdate: new Date().toLocaleDateString('en-IN')
                 };
+                await db.collection('settings').doc('library').set(settings);
+                addStep('Settings बनाना', '✓ Done');
 
-                const userRef = await db.collection('users').add(demoUser);
+                // Step 3: Create shifts
+                addStep('Shifts बनाना', '⏳ Processing...');
+                const shifts = {
+                    morning: { start: '06:00', end: '12:00' },
+                    evening: { start: '14:00', end: '20:00' },
+                    fullDay: { start: '06:00', end: '20:00' }
+                };
+                await db.collection('shifts').doc('library').set(shifts);
+                addStep('Shifts बनाना', '✓ Done');
+
+                // Step 4: Create demo students
+                addStep('Demo Students बनाना', '⏳ Processing...');
+                const demoStudents = [
+                    {
+                        id: 'STU_001',
+                        name: 'Amit Kumar',
+                        mobile: '9876543210',
+                        joiningDate: '2026-01-01',
+                        seatNumber: 1,
+                        shift: 'Morning',
+                        status: 'Active',
+                        photo: null
+                    },
+                    {
+                        id: 'STU_002',
+                        name: 'Priya Singh',
+                        mobile: '9876543211',
+                        joiningDate: '2026-01-05',
+                        seatNumber: 2,
+                        shift: 'Evening',
+                        status: 'Active',
+                        photo: null
+                    },
+                    {
+                        id: 'STU_003',
+                        name: 'Raj Patel',
+                        mobile: '9876543212',
+                        joiningDate: '2026-01-10',
+                        seatNumber: 3,
+                        shift: 'Full Day',
+                        status: 'Active',
+                        photo: null
+                    }
+                ];
                 
+                for (let student of demoStudents) {
+                    const existingStudent = await db.collection('students').doc(student.id).get();
+                    if (!existingStudent.exists) {
+                        await db.collection('students').doc(student.id).set(student);
+                    }
+                }
+                addStep('Demo Students बनाना', `✓ Done (${demoStudents.length})`);
+
+                // Step 5: Create demo payments
+                addStep('Demo Payments बनाना', '⏳ Processing...');
+                const demoPayments = [
+                    {
+                        id: 'PAY_001',
+                        studentId: 'STU_001',
+                        month: '2026-02',
+                        amount: 1500,
+                        status: 'Paid',
+                        dueDate: '2026-02-28',
+                        paymentDate: '2026-02-05',
+                        notes: 'February payment'
+                    },
+                    {
+                        id: 'PAY_002',
+                        studentId: 'STU_002',
+                        month: '2026-02',
+                        amount: 1500,
+                        status: 'Unpaid',
+                        dueDate: '2026-02-28',
+                        paymentDate: null,
+                        notes: 'Pending'
+                    }
+                ];
+                
+                for (let payment of demoPayments) {
+                    const existingPayment = await db.collection('payments').doc(payment.id).get();
+                    if (!existingPayment.exists) {
+                        await db.collection('payments').doc(payment.id).set(payment);
+                    }
+                }
+                addStep('Demo Payments बनाना', `✓ Done (${demoPayments.length})`);
+
+                // Success message
                 statusDiv.innerHTML = `
                     <div class="status success">
-                        <h2>✓ Demo User Created!</h2>
-                        <p><strong>Email:</strong> student@falcon.com</p>
-                        <p><strong>Password:</strong> student123</p>
+                        <h2>✓ सेटअप पूरा हुआ!</h2>
+                        <p style="text-align: left;">
+                            <strong>Login करने के लिए:</strong><br><br>
+                            📧 <strong>Email:</strong> student@falcon.com<br>
+                            🔐 <strong>Password:</strong> student123<br><br>
+                            ✅ Demo Data Created:<br>
+                            • 1 Demo User<br>
+                            • 3 Demo Students<br>
+                            • 2 Demo Payments<br>
+                            • Settings & Shifts
+                        </p>
                     </div>
                 `;
+                
+                console.log('✅ Complete Setup Successful!');
+
             } catch (error) {
-                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+                updateStatus(`❌ Error: ${error.message}`, 'error');
+                console.error('Setup Error:', error);
             }
         }
 
         // Auto-check on load
         window.addEventListener('load', function() {
             const statusDiv = document.getElementById('status');
-            statusDiv.innerHTML = '<div class="status info">ℹ️ Click button to create demo user...</div>';
+            statusDiv.innerHTML = '<div class="status info">ℹ️ Click button to setup demo user & data...</div>';
         });
     </script>
 </body>

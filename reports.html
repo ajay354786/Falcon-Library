@@ -54,7 +54,20 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
+            // Initialize real-time listeners
+            setTimeout(() => {
+                initializeRealtimeListeners();
+            }, 1000);
         });
+
+        // Refresh reports when data changes
+        function refreshStudentsList() {
+            if (currentReportData) {
+                if (currentReportData.title && currentReportData.title.includes('Student')) generateStudentReport();
+                else if (currentReportData.title && currentReportData.title.includes('Seat')) generateSeatUtilizationReport();
+                else if (currentReportData.title && currentReportData.title.includes('Payment')) generatePaymentReport();
+            }
+        }
 
         function generateStudentReport() {
             const students = JSON.parse(localStorage.getItem('students')) || [];

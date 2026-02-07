@@ -111,7 +111,16 @@
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
             loadSeatGrid();
+            // Initialize real-time listeners
+            setTimeout(() => {
+                initializeRealtimeListeners();
+            }, 1000);
         });
+
+        // Refresh seat grid when students change (called by real-time listeners)
+        function refreshStudentsList() {
+            loadSeatGrid();
+        }
 
         function loadSeatGrid() {
             const settings = JSON.parse(localStorage.getItem('settings')) || { totalSeats: 0 };
@@ -168,23 +177,23 @@
             document.getElementById('seatModal').style.display = 'none';
         }
 
-        function assignSeat(event) {
+        async function assignSeat(event) {
             event.preventDefault();
             
             const studentId = parseInt(document.getElementById('seatStudent').value);
             const shift = document.getElementById('seatShift').value;
-            const students = JSON.parse(localStorage.getItem('students')) || [];
             
-            const student = students.find(s => s.id === studentId);
-            if (student) {
-                student.seatNumber = currentSeat;
-                student.shift = shift;
-                
-                localStorage.setItem('students', JSON.stringify(students));
-                closeSeatModal();
+            // Use global updateStudent function for Firestore sync
+            await updateStudent(studentId, {
+                seatNumber: currentSeat,
+                shift: shift
+            });
+            
+            closeSeatModal();
+            // Wait for Firestore update
+            setTimeout(() => {
                 loadSeatGrid();
-                alert('Seat assigned successfully!');
-            }
+            }, 500);
         }
 
         window.onclick = function(event) {
